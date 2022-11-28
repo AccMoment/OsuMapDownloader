@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform") version "1.7.21"
+    kotlin("plugin.serialization") version "1.7.21"
 }
 
 group = "com.accmoment"
@@ -28,12 +29,14 @@ kotlin {
     }
     sourceSets {
         val ktorVersion = "2.1.3"
+        val okioVersion = "3.2.0"
         val commonMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-curl:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+                implementation("com.squareup.okio:okio:$okioVersion")
             }
         }
         val nativeTest by getting
