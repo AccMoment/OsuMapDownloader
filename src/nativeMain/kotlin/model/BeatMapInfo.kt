@@ -1,4 +1,5 @@
 package model
+import kotlinx.serialization.SerialInfo
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
@@ -63,7 +64,7 @@ data class BeatMapInfo(
     @SerialName("mode")
     val mode: String,
     @SerialName("packs")
-    val packs: String,
+    val packs: String?,
     @SerialName("passcount")
     val passCount: String,
     @SerialName("playcount")
