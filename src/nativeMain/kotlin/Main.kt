@@ -1,5 +1,4 @@
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -53,8 +52,12 @@ suspend fun runDownload() {
 
     val sinceDate = SinceDate(years, months, days)
 
-    val mapDownloader =
-        MapDownloader(apiKey = config?.apiKey!!, sinceTime = sinceDate, osuPath = config?.osuPath!!, mode = mode)
+    val mapDownloader = MapDownloader(
+        apiKey = config?.apiKey!!,
+        sinceTime = sinceDate,
+        osuPath = config?.osuPath!!,
+        mode = mode
+    )
 
     try {
         mapDownloader.start()
