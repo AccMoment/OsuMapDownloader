@@ -23,7 +23,8 @@ class MapDownloader(
     private val osuPath: String,
     val mode: Int,
 ) {
-
+    private var totalCount=0
+    private var currentCount=0
     private val mapChannel = Channel<Int>(5)
 
     private val scope = CoroutineScope(newFixedThreadPoolContext(5, "MapDownloader"))
@@ -47,7 +48,7 @@ class MapDownloader(
     }
 
     private suspend fun produceMapList() {
-        var mapCount = 500
+        var mapCount=500
         var date = sinceTime.toString()
         val songsPath = "$osuPath\\Songs"
         val songs = FileSystem.SYSTEM.list(songsPath.toPath()).map {
@@ -57,7 +58,6 @@ class MapDownloader(
         }.filter { !it.isEmptyOrBlack() }
             .map { it.toInt() }
         while (mapCount != 0) {
-
             //println(url)
             println("request from osu!api to query maps....")
             val response = client.get(beatMapsApi) {
@@ -76,6 +76,7 @@ class MapDownloader(
                 .map {
                 it.beatMapSetId.toInt()
             }.distinct().filter { !songs.contains(it) }
+            totalCount+=mapList.size
             mapList.forEach {
                 mapChannel.send(it)
             }
@@ -117,16 +118,18 @@ class MapDownloader(
                         }
                         file.flush()
                         file.close()
-                        println("$fileName was download completed")
-                        println()
+                        currentCount++
+                        println("$fileName was download completed \u001B[38;5;81m[$currentCount/$totalCount]\u001B[0m")
+                        //println()
                     }catch (e:Exception){
-                        println("$fileName was download fail")
-                        throw Exception(e.message)
+                        currentCount++
+                        println("\u001B[38;5;196m$fileName was download fail \u001B[38;5;81m[$currentCount/$totalCount]\u001B[0m")
+                        //throw Exception(e.message)
                     }
                 }
         } catch (e: Exception) {
-            println("fail reason:${e.message}")
-            println()
+            //println("fail reason:${e.message}")
+            //println()
         }
     }
 
