@@ -1,4 +1,5 @@
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -10,6 +11,10 @@ import okio.Path.Companion.toPath
 
 private val json = Json { prettyPrint = true }
 fun main(): Unit = runBlocking {
+    runDownload()
+}
+
+suspend fun runDownload() {
     val configFileName = "download_config.json"
     val configFileExist = FileSystem.SYSTEM.exists(configFileName.toPath())
 
@@ -23,7 +28,7 @@ fun main(): Unit = runBlocking {
         println("请稍后在配置文件($configFileName)中添加osu!apikey和osu路径")
         println("请按任意键退出....")
         readln()
-        return@runBlocking
+        return
     }
 
     var config: Config? = null
@@ -36,24 +41,34 @@ fun main(): Unit = runBlocking {
         println("osu!路径错误! 请重新设置osu!路径")
         println("请按任意键退出....")
         readln()
-        return@runBlocking
+        return
     }
     val mode = getMode()
-    val sinceDate = SinceDate(2022, 11, 25)
+
+    val years = getDate("请输入年份(eg:2011,默认为2007):", 2007)
+
+    val months = getDate("请输入月份(eg:1,默认为1):", 1)
+
+    val days = getDate("请输入日期(eg:1,默认为1):", 1)
+
+    val sinceDate = SinceDate(years, months, days)
+
     val mapDownloader =
         MapDownloader(apiKey = config?.apiKey!!, sinceTime = sinceDate, osuPath = config?.osuPath!!, mode = mode)
+
     try {
         mapDownloader.start()
         mapDownloader.job?.join()
     } catch (e: Exception) {
         println(e.message)
     }
-//    val list=FileSystem.SYSTEM.list("${config?.osuPath!!}\\Songs".toPath())
-//    println(list.size)
-//    println(list.first().name)
     println("all downloads completed")
+
+    println("按任意键退出...")
+
     readln()
 }
+
 
 fun getMode(): Int {
     var mode = 0
@@ -72,5 +87,18 @@ fun getMode(): Int {
     return mode
 }
 
+fun getDate(tip: String, default: Int): Int {
+    while (true) {
+        print(tip)
+        val read = readln()
+        println(read)
+        if (read.isEmptyOrBlack()) return default
+        try {
+            return read.toInt()
+        } catch (e: NumberFormatException) {
+            println("无效数字,请重新输入")
+        }
+    }
+}
 
 fun CharSequence.isEmptyOrBlack() = isEmpty() || isBlank()
