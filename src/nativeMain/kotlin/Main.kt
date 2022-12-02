@@ -1,3 +1,4 @@
+import kotlinx.cinterop.cValue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -6,9 +7,15 @@ import model.Config
 import model.SinceDate
 import okio.FileSystem
 import okio.Path.Companion.toPath
+import platform.posix.system
+import platform.windows.CONSOLE_CURSOR_INFO
+import platform.windows.GetStdHandle
+import platform.windows.STD_OUTPUT_HANDLE
+import platform.windows.SetConsoleCursorInfo
 
 
 private val json = Json { prettyPrint = true }
+
 fun main(): Unit = runBlocking {
     runDownload()
 }
@@ -58,18 +65,14 @@ suspend fun runDownload() {
         osuPath = config?.osuPath!!,
         mode = mode
     )
-
+    system("cls")
+    hideCursor()
     try {
         mapDownloader.start()
-        mapDownloader.job?.join()
+        //mapDownloader.job?.join()
     } catch (e: Exception) {
         println(e.message)
     }
-    println("all downloads completed")
-
-    println("按任意键退出...")
-
-    readln()
 }
 
 
@@ -105,3 +108,12 @@ fun getDate(tip: String, default: Int): Int {
 }
 
 fun CharSequence.isEmptyOrBlack() = isEmpty() || isBlank()
+
+fun hideCursor() {
+    val handle = GetStdHandle(STD_OUTPUT_HANDLE)
+    val info = cValue<CONSOLE_CURSOR_INFO> {
+        bVisible = 0
+    }
+    SetConsoleCursorInfo(handle, info)
+}
+
