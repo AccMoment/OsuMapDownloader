@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,7 +23,7 @@ const BAR_TEMPLATE: &str = "{msg} \x1b[38;5;81m[{bar:20.cyan/blue}]\x1b[0m";
 pub struct MapDownloader {
     api_key: String,
     since_time: SinceDate,
-    osu_path: String,
+    songs_dir: PathBuf,
     mode: i32,
     client: Client,
     mp: Arc<MultiProgress>,
@@ -41,10 +41,11 @@ impl MapDownloader {
             .connect_timeout(Duration::from_secs(60))
             .build()?;
         let mp = MultiProgress::with_draw_target(ProgressDrawTarget::stdout());
+        let songs_dir = Path::new(&osu_path).join("Songs");
         Ok(MapDownloader {
             api_key,
             since_time,
-            osu_path,
+            songs_dir,
             mode,
             client,
             mp: Arc::new(mp),
@@ -52,6 +53,8 @@ impl MapDownloader {
     }
 
     pub async fn start(self: &Arc<Self>) -> Result<(), Box<dyn std::error::Error>> {
+        tokio::fs::create_dir_all(&self.songs_dir).await?;
+
         let (tx, rx) = mpsc::channel::<i32>(5);
         let rx = Arc::new(tokio::sync::Mutex::new(rx));
 
@@ -117,8 +120,7 @@ impl MapDownloader {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut map_count = 500;
         let mut date = self.since_time.to_string();
-        let songs_dir = Path::new(&self.osu_path).join("Songs");
-        let songs = get_local_beatmap_set_ids(&songs_dir).await;
+        let songs = get_local_beatmap_set_ids(&self.songs_dir).await;
 
         while map_count != 0 {
             status.set_message(format!("request from osu!api to query maps....[{date}]"));
@@ -244,10 +246,7 @@ impl MapDownloader {
         }
         let content_length_mb = bytes_to_mb(content_length);
 
-        let songs_dir = Path::new(&self.osu_path).join("Songs");
-        let file_path = songs_dir.join(&file_name);
-
-        tokio::fs::create_dir_all(&songs_dir).await?;
+        let file_path = self.songs_dir.join(&file_name);
 
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)
