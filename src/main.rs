@@ -1,14 +1,17 @@
 mod beatmap_info;
 mod config;
+mod download_type;
 mod map_downloader;
 mod since_date;
-
+use std::error::Error;
 use std::io::{self, Write};
 use std::sync::Arc;
 
 use config::{Config, LoadResult};
 use map_downloader::MapDownloader;
 use since_date::SinceDate;
+
+use crate::download_type::DownloadType;
 
 const CONFIG_FILE: &str = "download_config.json";
 
@@ -41,6 +44,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mode = get_mode()?;
+    let download_type = get_download_type()?;
     let years = get_date("请输入年份(eg:2011,默认为2007):", 2007)?;
     let months = get_date("请输入月份(eg:1,默认为1):", 1)?;
     let days = get_date("请输入日期(eg:1,默认为1):", 1)?;
@@ -52,6 +56,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         since_date,
         config.osu_path,
         mode,
+        download_type,
     )?);
 
     let term = console::Term::stdout();
@@ -83,6 +88,29 @@ fn get_mode() -> Result<i32, Box<dyn std::error::Error>> {
         }
         match trimmed.parse::<i32>() {
             Ok(n) if (0..=3).contains(&n) => return Ok(n),
+            _ => println!("无效数字,请重新输入"),
+        }
+    }
+}
+
+fn get_download_type() -> Result<DownloadType, Box<dyn Error>> {
+    print!("请选择需要下载的方式(full=0,novideo=1,mini=2),空默认为full:");
+    io::stdout().flush()?;
+
+    loop {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        let trimmed = input.trim();
+        if trimmed.is_empty() {
+            return Ok(DownloadType::FULL);
+        }
+        match trimmed.parse::<i32>() {
+            Ok(n) => match n {
+                0 => return Ok(DownloadType::FULL),
+                1 => return Ok(DownloadType::NoVideo),
+                2 => return Ok(DownloadType::MINI),
+                _ => return Ok(DownloadType::FULL),
+            },
             _ => println!("无效数字,请重新输入"),
         }
     }

@@ -10,10 +10,12 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 
 use crate::beatmap_info::BeatMapInfo;
+use crate::download_type::DownloadType;
 use crate::since_date::SinceDate;
-
 const BEATMAPS_API: &str = "https://osu.ppy.sh/api/get_beatmaps";
-const SAYO_DOWNLOAD_API: &str = "https://dl.sayobot.cn/beatmaps/download/full/";
+const SAYO_FULL_DOWNLOAD_API: &str = "https://dl.sayobot.cn/beatmaps/download/full/";
+const SAYO_NO_VIDEO_DOWNLOAD_API: &str = "https://dl.sayobot.cn/beatmaps/download/novideo/";
+const SAYO_MINI_VIDEO_DOWNLOAD_API: &str = "https://dl.sayobot.cn/beatmaps/download/mini/";
 const DOWNLOAD_THREADS: usize = 5;
 const PROGRESS_INTERVAL_MS: u64 = 120;
 
@@ -25,6 +27,7 @@ pub struct MapDownloader {
     since_time: SinceDate,
     songs_dir: PathBuf,
     mode: i32,
+    download_type: DownloadType,
     client: Client,
     mp: Arc<MultiProgress>,
 }
@@ -35,6 +38,7 @@ impl MapDownloader {
         since_time: SinceDate,
         osu_path: String,
         mode: i32,
+        download_type: DownloadType,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let client = Client::builder()
             .timeout(Duration::from_secs(60 * 15))
@@ -47,6 +51,7 @@ impl MapDownloader {
             since_time,
             songs_dir,
             mode,
+            download_type,
             client,
             mp: Arc::new(mp),
         })
@@ -223,7 +228,11 @@ impl MapDownloader {
         total_count: &AtomicI32,
         current_count: &AtomicI32,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let url = format!("{SAYO_DOWNLOAD_API}{id}");
+        let url = match &self.download_type {
+            DownloadType::FULL => format!("{SAYO_FULL_DOWNLOAD_API}{id}"),
+            DownloadType::NoVideo => format!("{SAYO_NO_VIDEO_DOWNLOAD_API}{id}"),
+            DownloadType::MINI => format!("{SAYO_MINI_VIDEO_DOWNLOAD_API}{id}"),
+        };
 
         let mut response = self
             .client
